@@ -1,22 +1,20 @@
 package filestation
 
 import (
-	"strconv"
-	"strings"
-
 	"github.com/maksym-nazarenko/terraform-provider-synology/synology-go/client/api"
 )
 
 type CreateFolderRequest struct {
 	baseFileStationRequest
 
-	version     int
 	folderPaths []string
 	names       []string
 	forceParent bool
 }
 
 type CreateFolderResponse struct {
+	baseFileStationResponse
+
 	Folders []struct {
 		Path  string
 		Name  string
@@ -28,20 +26,12 @@ var _ api.Request = (*CreateFolderRequest)(nil)
 
 func NewCreateFolderRequest(version int) *CreateFolderRequest {
 	return &CreateFolderRequest{
-		version: version,
+		baseFileStationRequest: baseFileStationRequest{
+			Version:   version,
+			APIName:   "SYNO.FileStation.CreateFolder",
+			APIMethod: "create",
+		},
 	}
-}
-
-func (r CreateFolderRequest) APIName() string {
-	return "SYNO.FileStation.CreateFolder"
-}
-
-func (r CreateFolderRequest) APIMethod() string {
-	return "create"
-}
-
-func (r CreateFolderRequest) APIVersion() int {
-	return r.version
 }
 
 func (r *CreateFolderRequest) WithFolderPath(value string) *CreateFolderRequest {
@@ -59,20 +49,7 @@ func (r *CreateFolderRequest) WithForceParent(value bool) *CreateFolderRequest {
 	return r
 }
 
-// todo: create generic function to handle different Go types
-func (r CreateFolderRequest) RequestParams() api.RequestParams {
-	return map[string]string{
-		"folder_path":  "[\"" + strings.Join(r.folderPaths, "\",\"") + "\"]",
-		"name":         "[\"" + strings.Join(r.names, "\",\"") + "\"]",
-		"force_parent": strconv.FormatBool(r.forceParent),
-	}
-}
-
-func (r CreateFolderRequest) NewResponseInstance() api.Response {
-	return &CreateFolderResponse{}
-}
-
-func (r CreateFolderRequest) ErrorSummaries() []api.ErrorSummary {
+func (r CreateFolderResponse) ErrorSummaries() []api.ErrorSummary {
 	return []api.ErrorSummary{
 		{
 			1100: "Failed to create a folder. More information in <errors> object.",

@@ -10,7 +10,6 @@ import (
 	"net/http"
 	"net/http/cookiejar"
 	"net/url"
-	"strconv"
 	"time"
 
 	"github.com/maksym-nazarenko/terraform-provider-synology/synology-go/client/api"
@@ -117,19 +116,11 @@ func (c client) FileStationInfo() {
 	}()
 }
 
-func (c client) Do(r api.Request) (api.Response, error) {
+func (c client) Do(r api.Request, response api.Response) error {
 	u := c.baseURL()
 
-	u.Path = r.APIPath()
-	q := u.Query()
-	q.Add("api", r.APIName())
-	q.Add("version", strconv.Itoa(r.APIVersion()))
-	q.Add("method", r.APIMethod())
-	for k, v := range r.RequestParams() {
-		q.Add(k, v)
-	}
-
-	u.RawQuery = q.Encode()
+	// request can override this path by implementing APIPathProvider interface
+	u.Path = "/webapi/entry.cgi"
 
 	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
 	defer cancel()
@@ -138,12 +129,12 @@ func (c client) Do(r api.Request) (api.Response, error) {
 
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, u.String(), nil)
 	if err != nil {
-		return nil, err
+		return err
 	}
 
 	resp, err := c.httpClient.Do(req)
 	if err != nil {
-		return nil, err
+		return err
 	}
 	defer func() {
 		_, _ = io.ReadAll(resp.Body)
@@ -152,26 +143,31 @@ func (c client) Do(r api.Request) (api.Response, error) {
 
 	synoResponse := api.GenericResponse{}
 	if err := json.NewDecoder(resp.Body).Decode(&synoResponse); err != nil {
-		return nil, err
-	}
-	if !synoResponse.Success {
-		synoResponse.Error = c.handleErrors(r, synoResponse)
+		return err
 	}
 	log.Printf("%+v\n", synoResponse)
-
-	response := r.NewResponseInstance()
-	if err := mapstructure.Decode(synoResponse.Data, &response); err != nil {
-		return nil, err
+	// -----
+	// if err := mapstructure.Decode(synoResponse.Data, response.Data()); err != nil {
+	// }
+	if err := mapstructure.Decode(synoResponse.Data, response); err != nil {
 	}
+	response.SetError(c.handleErrors(response, synoResponse))
+	// -----
+	// response.DecodePayload(mapstructure.Decode, synoResponse.Data)
+	// -----
 
-	return response, nil
+	return nil
 }
 
-func (c client) handleErrors(req api.ErrorDescriber, response api.GenericResponse) api.SynologyError {
+func (c client) handleErrors(errorDescriber api.ErrorDescriber, response api.GenericResponse) api.SynologyError {
 	err := api.SynologyError{}
+	if response.Error.Code == 0 {
+		return err
+	}
+
 	err.Code = response.Error.Code
 
-	knownErrors := append(req.ErrorSummaries(), api.GlobalErrors)
+	knownErrors := append(errorDescriber.ErrorSummaries(), api.GlobalErrors)
 	err.Summary = api.DescribeError(err.Code, knownErrors...)
 
 	for _, e := range response.Error.Errors {
@@ -181,11 +177,10 @@ func (c client) handleErrors(req api.ErrorDescriber, response api.GenericRespons
 			Details: make(api.ErrorFields),
 		}
 		for k, v := range e.Details {
-			if k == "code" {
-				continue
-			}
 			item.Details[k] = v
 		}
+		// drop 'code' from map as it is represented by dedicated field
+		delete(item.Details, "code")
 		err.Errors = append(err.Errors, item)
 	}
 

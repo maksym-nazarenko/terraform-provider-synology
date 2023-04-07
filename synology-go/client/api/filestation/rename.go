@@ -7,9 +7,8 @@ import (
 type FileStationRenameRequest struct {
 	baseFileStationRequest
 
-	version int
-	path    string
-	name    string
+	name string
+	path string
 }
 
 type File struct {
@@ -19,6 +18,8 @@ type File struct {
 }
 
 type FileStationRenameResponse struct {
+	baseFileStationResponse
+
 	Files []File
 }
 
@@ -26,44 +27,25 @@ var _ api.Request = (*FileStationRenameRequest)(nil)
 
 func NewFileStationRenameRequest(version int) *FileStationRenameRequest {
 	return &FileStationRenameRequest{
-		version: version,
+		baseFileStationRequest: baseFileStationRequest{
+			Version:   version,
+			APIName:   "SYNO.FileStation.Rename",
+			APIMethod: "rename",
+		},
 	}
 }
 
-func (r *FileStationRenameRequest) WithPath(path string) *FileStationRenameRequest {
-	r.path = path
+func (r *FileStationRenameRequest) WithName(value string) *FileStationRenameRequest {
+	r.name = value
 	return r
 }
 
-func (r *FileStationRenameRequest) WithName(name string) *FileStationRenameRequest {
-	r.name = name
+func (r *FileStationRenameRequest) WithPath(value string) *FileStationRenameRequest {
+	r.path = value
 	return r
 }
 
-func (r FileStationRenameRequest) APIName() string {
-	return "SYNO.FileStation.Rename"
-}
-
-func (r FileStationRenameRequest) APIMethod() string {
-	return "rename"
-}
-
-func (r FileStationRenameRequest) APIVersion() int {
-	return r.version
-}
-
-func (r FileStationRenameRequest) RequestParams() api.RequestParams {
-	return map[string]string{
-		"path": r.path,
-		"name": r.name,
-	}
-}
-
-func (r FileStationRenameRequest) NewResponseInstance() api.Response {
-	return &FileStationRenameResponse{}
-}
-
-func (r FileStationRenameRequest) ErrorSummaries() []api.ErrorSummary {
+func (r FileStationRenameResponse) ErrorSummaries() []api.ErrorSummary {
 	return []api.ErrorSummary{
 		{
 			1200: "Failed to rename it.",
