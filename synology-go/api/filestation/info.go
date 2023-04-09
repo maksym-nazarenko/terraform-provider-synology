@@ -1,7 +1,7 @@
 package filestation
 
 import (
-	"github.com/maksym-nazarenko/terraform-provider-synology/synology-go/client/api"
+	"github.com/maksym-nazarenko/terraform-provider-synology/synology-go/api"
 )
 
 type FileStationInfoRequest struct {

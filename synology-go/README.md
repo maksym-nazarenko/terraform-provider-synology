@@ -24,8 +24,8 @@ package main
 import (
     "log"
 
-	"github.com/maksym-nazarenko/terraform-provider-synology/synology-go/client/api"
-	"github.com/maksym-nazarenko/terraform-provider-synology/synology-go/client/api/filestation"
+	"github.com/maksym-nazarenko/terraform-provider-synology/synology-go/api"
+	"github.com/maksym-nazarenko/terraform-provider-synology/synology-go/api/filestation"
 )
 
 func main() {
