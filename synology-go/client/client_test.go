@@ -1,11 +1,14 @@
 package client
 
 import (
+	"net/url"
 	"os"
 	"testing"
 
 	"github.com/maksym-nazarenko/terraform-provider-synology/synology-go/client/api"
 	"github.com/maksym-nazarenko/terraform-provider-synology/synology-go/client/api/filestation"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func newClient() (*client, error) {
@@ -19,6 +22,109 @@ func newClient() (*client, error) {
 	}
 
 	return c, nil
+}
+
+func TestMarshalURL(t *testing.T) {
+	type embeddedStruct struct {
+		EmbeddedString string `synology:"embedded_string"`
+		EmbeddedInt    int    `synology:"embedded_int"`
+	}
+
+	testCases := []struct {
+		name     string
+		in       interface{}
+		expected url.Values
+	}{
+		{
+			name: "scalar types",
+			in: struct {
+				Name    string `synology:"name"`
+				ID      int    `synology:"id"`
+				Enabled bool   `synology:"enabled"`
+			}{
+				Name:    "name value",
+				ID:      2,
+				Enabled: true,
+			},
+			expected: url.Values{
+				"name":    []string{"name value"},
+				"id":      []string{"2"},
+				"enabled": []string{"true"},
+			},
+		},
+		{
+			name: "slice types",
+			in: struct {
+				Names []string `synology:"names"`
+				IDs   []int    `synology:"ids"`
+			}{
+				Names: []string{"value 1", "value 2"},
+				IDs:   []int{1, 2, 3},
+			},
+			expected: url.Values{
+				"names": []string{"[\"value 1\",\"value 2\"]"},
+				"ids":   []string{"[1,2,3]"},
+			},
+		},
+		{
+			name: "embedded struct",
+			in: struct {
+				embeddedStruct
+				Name string `synology:"name"`
+			}{
+				embeddedStruct: embeddedStruct{
+					EmbeddedString: "my string",
+					EmbeddedInt:    5,
+				},
+				Name: "field name",
+			},
+			expected: url.Values{
+				"name":            []string{"field name"},
+				"embedded_string": []string{"my string"},
+				"embedded_int":    []string{"5"},
+			},
+		},
+		{
+			name: "unexported field without tag",
+			in: struct {
+				Name       string `synology:"name"`
+				ID         int    `synology:"id"`
+				unexported string
+			}{
+				Name:       "name value",
+				ID:         2,
+				unexported: "must be skipped",
+			},
+			expected: url.Values{
+				"name": []string{"name value"},
+				"id":   []string{"2"},
+			},
+		},
+		{
+			name: "unexported field with tag",
+			in: struct {
+				Name       string `synology:"name"`
+				ID         int    `synology:"id"`
+				unexported string `synology:"unexported"`
+			}{
+				Name:       "name value",
+				ID:         2,
+				unexported: "with explicit tag",
+			},
+			expected: url.Values{
+				"name":       []string{"name value"},
+				"id":         []string{"2"},
+				"unexported": []string{"with explicit tag"},
+			},
+		},
+	}
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			result, err := marshalURL(tc.in)
+			require.NoError(t, err)
+			assert.Equal(t, tc.expected, result)
+		})
+	}
 }
 
 func TestFilestationInfo(t *testing.T) {
@@ -94,7 +200,7 @@ func TestCreateFolder(t *testing.T) {
 	}
 	r := filestation.NewCreateFolderRequest(2).
 		WithFolderPath("/test-folder").
-		WithName("folder_from_tests")
+		WithName("folder_from_tests-2")
 
 	resp := filestation.CreateFolderResponse{}
 	err = c.Do(r, &resp)

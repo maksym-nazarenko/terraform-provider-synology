@@ -7,9 +7,9 @@ import (
 type CreateFolderRequest struct {
 	baseFileStationRequest
 
-	folderPaths []string
-	names       []string
-	forceParent bool
+	folderPaths []string `synology:"folder_path"`
+	names       []string `synology:"name"`
+	forceParent bool     `synology:"force_parent"`
 }
 
 type CreateFolderResponse struct {
