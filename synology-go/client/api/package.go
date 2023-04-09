@@ -8,8 +8,9 @@ type Request interface {
 type Response interface {
 	ErrorDescriber
 
-	Success() bool
+	GetError() SynologyError
 	SetError(SynologyError)
+	Success() bool
 }
 
 // GenericResponse is a concrete Response implementation.

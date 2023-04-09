@@ -47,16 +47,18 @@ func (se SynologyError) Error() string {
 	buf := strings.Builder{}
 	buf.WriteString(fmt.Sprintf("[%d] %s", se.Code, se.Summary))
 	if len(se.Errors) > 0 {
-		buf.WriteString("\nDetails:")
+		buf.WriteString("\n\tDetails:")
 	}
 
 	for _, e := range se.Errors {
 		detailedFields := []string{}
-		for k, v := range e.Details {
-			detailedFields = append(detailedFields, k+": "+fmt.Sprintf("%v", v))
+		buf.WriteString(fmt.Sprintf("\n\t\t[%d] %s", e.Code, e.Summary))
+		if len(e.Details) > 0 {
+			for k, v := range e.Details {
+				detailedFields = append(detailedFields, k+": "+fmt.Sprintf("%v", v))
+			}
+			buf.WriteString(": [" + strings.Join(detailedFields, ",") + "]")
 		}
-		buf.WriteString(fmt.Sprintf("\n [%d] %s", e.Code, e.Summary))
-		buf.WriteString(": [" + strings.Join(detailedFields, ",") + "]")
 	}
 
 	return buf.String()

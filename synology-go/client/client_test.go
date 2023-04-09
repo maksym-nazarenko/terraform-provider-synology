@@ -208,7 +208,7 @@ func TestCreateFolder(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	t.Logf("%+v\n", resp)
+	t.Logf("%v\n", resp.GetError())
 
 	t.Fail()
 }

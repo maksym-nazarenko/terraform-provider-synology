@@ -19,3 +19,7 @@ func (b *baseFileStationResponse) SetError(e api.SynologyError) {
 func (b baseFileStationResponse) Success() bool {
 	return b.synologyError.Code == 0
 }
+
+func (b *baseFileStationResponse) GetError() api.SynologyError {
+	return b.synologyError
+}
