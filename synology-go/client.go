@@ -25,6 +25,7 @@ type client struct {
 	host       string
 }
 
+// New initializes "client" instance with minimal input configuration.
 func New(host string, skipCertificateVerification bool) (*client, error) {
 	transport := &http.Transport{
 		DialContext: (&net.Dialer{
@@ -41,6 +42,7 @@ func New(host string, skipCertificateVerification bool) (*client, error) {
 		},
 	}
 
+	// currently, 'Cookie' is the only supported method for providing 'sid' token to DSM
 	jar, err := cookiejar.New(&cookiejar.Options{PublicSuffixList: publicsuffix.List})
 	if err != nil {
 		return nil, err
@@ -56,6 +58,7 @@ func New(host string, skipCertificateVerification bool) (*client, error) {
 	}, nil
 }
 
+// Login runs a login flow to retrieve session token from Synology.
 func (c *client) Login(user, password, sessionName string) error {
 	u := c.baseURL()
 
@@ -87,6 +90,85 @@ func (c *client) Login(user, password, sessionName string) error {
 	}()
 
 	return nil
+}
+
+// Do performs an HTTP request to remote Synology instance.
+//
+// Returns error in case of any transport errors.
+// For API-level errors, check response object.
+func (c client) Do(r api.Request, response api.Response) error {
+	u := c.baseURL()
+
+	// request can override this path by implementing APIPathProvider interface
+	u.Path = "/webapi/entry.cgi"
+	query, err := marshalURL(r)
+	if err != nil {
+		return err
+	}
+
+	u.RawQuery = query.Encode()
+	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+	defer cancel()
+
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, u.String(), nil)
+	if err != nil {
+		return err
+	}
+
+	resp, err := c.httpClient.Do(req)
+	if err != nil {
+		return err
+	}
+	defer func() {
+		_, _ = io.ReadAll(resp.Body)
+		_ = resp.Body.Close()
+	}()
+
+	synoResponse := api.GenericResponse{}
+	if err := json.NewDecoder(resp.Body).Decode(&synoResponse); err != nil {
+		return err
+	}
+	if err := mapstructure.Decode(synoResponse.Data, response); err != nil {
+		return err
+	}
+	response.SetError(c.handleErrors(response, synoResponse))
+
+	return nil
+}
+
+func (c client) baseURL() url.URL {
+	return url.URL{
+		Scheme: "https",
+		Host:   c.host,
+	}
+}
+
+func (c client) handleErrors(errorDescriber api.ErrorDescriber, response api.GenericResponse) api.SynologyError {
+	err := api.SynologyError{}
+	if response.Error.Code == 0 {
+		return err
+	}
+
+	err.Code = response.Error.Code
+
+	knownErrors := append(errorDescriber.ErrorSummaries(), api.GlobalErrors)
+	err.Summary = api.DescribeError(err.Code, knownErrors...)
+
+	for _, e := range response.Error.Errors {
+		item := api.ErrorItem{
+			Code:    e.Code,
+			Summary: api.DescribeError(e.Code, knownErrors...),
+			Details: make(api.ErrorFields),
+		}
+		for k, v := range e.Details {
+			item.Details[k] = v
+		}
+		// drop 'code' from map as it is represented by dedicated field
+		delete(item.Details, "code")
+		err.Errors = append(err.Errors, item)
+	}
+
+	return err
 }
 
 func marshalURL(r interface{}) (url.Values, error) {
@@ -154,83 +236,7 @@ func marshalURL(r interface{}) (url.Values, error) {
 				}
 			}
 		}
-		// marshal value according to the type
 	}
 
 	return ret, nil
-}
-
-func (c client) Do(r api.Request, response api.Response) error {
-	u := c.baseURL()
-
-	// request can override this path by implementing APIPathProvider interface
-	u.Path = "/webapi/entry.cgi"
-	query, err := marshalURL(r)
-	if err != nil {
-		return err
-	}
-
-	u.RawQuery = query.Encode()
-	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
-	defer cancel()
-
-	req, err := http.NewRequestWithContext(ctx, http.MethodGet, u.String(), nil)
-	if err != nil {
-		return err
-	}
-
-	resp, err := c.httpClient.Do(req)
-	if err != nil {
-		return err
-	}
-	defer func() {
-		_, _ = io.ReadAll(resp.Body)
-		_ = resp.Body.Close()
-	}()
-
-	synoResponse := api.GenericResponse{}
-	if err := json.NewDecoder(resp.Body).Decode(&synoResponse); err != nil {
-		return err
-	}
-	if err := mapstructure.Decode(synoResponse.Data, response); err != nil {
-		return err
-	}
-	response.SetError(c.handleErrors(response, synoResponse))
-
-	return nil
-}
-
-func (c client) handleErrors(errorDescriber api.ErrorDescriber, response api.GenericResponse) api.SynologyError {
-	err := api.SynologyError{}
-	if response.Error.Code == 0 {
-		return err
-	}
-
-	err.Code = response.Error.Code
-
-	knownErrors := append(errorDescriber.ErrorSummaries(), api.GlobalErrors)
-	err.Summary = api.DescribeError(err.Code, knownErrors...)
-
-	for _, e := range response.Error.Errors {
-		item := api.ErrorItem{
-			Code:    e.Code,
-			Summary: api.DescribeError(e.Code, knownErrors...),
-			Details: make(api.ErrorFields),
-		}
-		for k, v := range e.Details {
-			item.Details[k] = v
-		}
-		// drop 'code' from map as it is represented by dedicated field
-		delete(item.Details, "code")
-		err.Errors = append(err.Errors, item)
-	}
-
-	return err
-}
-
-func (c client) baseURL() url.URL {
-	return url.URL{
-		Scheme: "https",
-		Host:   c.host,
-	}
 }

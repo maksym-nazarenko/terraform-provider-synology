@@ -6,7 +6,6 @@ import (
 	"testing"
 
 	"github.com/maksym-nazarenko/terraform-provider-synology/synology-go/api"
-	"github.com/maksym-nazarenko/terraform-provider-synology/synology-go/api/filestation"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -127,43 +126,6 @@ func TestMarshalURL(t *testing.T) {
 	}
 }
 
-func TestFilestationInfo(t *testing.T) {
-	c, err := newClient()
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	req := filestation.NewFileStationInfoRequest(2)
-	resp := filestation.FileStationInfoResponse{}
-	err = c.Do(req, &resp)
-	if err != nil {
-		t.Log(err)
-	}
-	t.Logf("%+v\n", resp)
-
-	t.Fail()
-}
-
-func TestFilestationRename(t *testing.T) {
-	c, err := newClient()
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	req := filestation.NewFileStationRenameRequest(2).
-		WithPath("/some_folder").
-		WithName("/renamed_folder")
-
-	resp := filestation.FileStationRenameResponse{}
-	err = c.Do(req, &resp)
-	if err != nil {
-		t.Log(err)
-	}
-	t.Logf("%+v\n", resp)
-
-	t.Fail()
-}
-
 func TestHandleErrors(t *testing.T) {
 	c := client{}
 
@@ -174,6 +136,7 @@ func TestHandleErrors(t *testing.T) {
 			102: "error 102",
 		}}
 	}
+
 	resp := api.GenericResponse{
 		Success: false,
 		Data:    nil,
@@ -189,26 +152,6 @@ func TestHandleErrors(t *testing.T) {
 	synoErr := c.handleErrors(errorDescriber(req), resp)
 
 	t.Errorf("%+#v\n", synoErr)
-
-	t.Fail()
-}
-
-func TestCreateFolder(t *testing.T) {
-	c, err := newClient()
-	if err != nil {
-		t.Fatal(err)
-	}
-	r := filestation.NewCreateFolderRequest(2).
-		WithFolderPath("/test-folder").
-		WithName("folder_from_tests-2")
-
-	resp := filestation.CreateFolderResponse{}
-	err = c.Do(r, &resp)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	t.Logf("%v\n", resp.GetError())
 
 	t.Fail()
 }
