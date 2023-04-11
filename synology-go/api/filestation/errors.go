@@ -1,11 +1,5 @@
 package filestation
 
-type baseFileStationRequest struct{}
-
-func (r *baseFileStationRequest) APIPath() string {
-	return "/webapi/entry.cgi"
-}
-
 var commonErrors map[int]string = map[int]string{
 	400: "Invalid parameter of file operation",
 	401: "Unknown error of file operation",

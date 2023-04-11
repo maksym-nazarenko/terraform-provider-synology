@@ -5,6 +5,20 @@ import (
 	"strings"
 )
 
+// GlobalErrors holds mapping of global errors not related to particular API endpoint.
+var GlobalErrors ErrorSummary = ErrorSummary{
+	100: "Unknown error",
+	101: "No parameter of API, method or version",
+	102: "The requested API does not exist",
+	103: "The requested method does not exist",
+	104: "The requested version does not support the functionality",
+	105: "The logged in session does not have permission",
+	106: "Session timeout",
+	107: "Session interrupted by duplicate login",
+	119: "SID not found",
+}
+
+// ErrorDescriber defines interface to report all known errors to particular object.
 type ErrorDescriber interface {
 	// ErrorSummaries returns information about all known errors.
 	ErrorSummaries() []ErrorSummary
@@ -26,37 +40,29 @@ type ErrorItem struct {
 	Details ErrorFields
 }
 
+// ErrorSummary is a simple mapping of code->text to translate error codes to readable text.
 type ErrorSummary map[int]string
 
 // ErrorFields defines extra fields for particular detailed error.
 type ErrorFields map[string]interface{}
 
-var GlobalErrors ErrorSummary = ErrorSummary{
-	100: "Unknown error",
-	101: "No parameter of API, method or version",
-	102: "The requested API does not exist",
-	103: "The requested method does not exist",
-	104: "The requested version does not support the functionality",
-	105: "The logged in session does not have permission",
-	106: "Session timeout",
-	107: "Session interrupted by duplicate login",
-	119: "SID not found",
-}
-
+// Error satisfies error interface for SynologyError type.
 func (se SynologyError) Error() string {
 	buf := strings.Builder{}
 	buf.WriteString(fmt.Sprintf("[%d] %s", se.Code, se.Summary))
 	if len(se.Errors) > 0 {
-		buf.WriteString("\nDetails:")
+		buf.WriteString("\n\tDetails:")
 	}
 
 	for _, e := range se.Errors {
 		detailedFields := []string{}
-		for k, v := range e.Details {
-			detailedFields = append(detailedFields, k+": "+fmt.Sprintf("%v", v))
+		buf.WriteString(fmt.Sprintf("\n\t\t[%d] %s", e.Code, e.Summary))
+		if len(e.Details) > 0 {
+			for k, v := range e.Details {
+				detailedFields = append(detailedFields, k+": "+fmt.Sprintf("%v", v))
+			}
+			buf.WriteString(": [" + strings.Join(detailedFields, ",") + "]")
 		}
-		buf.WriteString(fmt.Sprintf("\n [%d] %s", e.Code, e.Summary))
-		buf.WriteString(": [" + strings.Join(detailedFields, ",") + "]")
 	}
 
 	return buf.String()
