@@ -1,6 +1,7 @@
 package api
 
 import (
+	"encoding/json"
 	"fmt"
 	"strings"
 )
@@ -79,4 +80,24 @@ func DescribeError(code int, summaries ...ErrorSummary) string {
 	}
 
 	return "Unknown error code"
+}
+
+func (ei *ErrorItem) UnmarshalJSON(b []byte) error {
+	fields := map[string]interface{}{}
+	err := json.Unmarshal(b, &fields)
+	if err != nil {
+		return err
+	}
+	result := ErrorItem{
+		Code: int(fields["code"].(float64)),
+	}
+	if len(fields) > 0 {
+		result.Details = ErrorFields{}
+		for k, v := range fields {
+			result.Details[k] = v
+		}
+	}
+	*ei = result
+
+	return nil
 }

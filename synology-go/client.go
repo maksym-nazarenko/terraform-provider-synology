@@ -131,7 +131,7 @@ func (c client) Do(r api.Request, response api.Response) error {
 	if err := mapstructure.Decode(synoResponse.Data, response); err != nil {
 		return err
 	}
-	response.SetError(c.handleErrors(response, synoResponse))
+	response.SetError(handleErrors(synoResponse, response, api.GlobalErrors))
 
 	return nil
 }
@@ -143,28 +143,27 @@ func (c client) baseURL() url.URL {
 	}
 }
 
-func (c client) handleErrors(errorDescriber api.ErrorDescriber, response api.GenericResponse) api.SynologyError {
-	err := api.SynologyError{}
+func handleErrors(response api.GenericResponse, errorDescriber api.ErrorDescriber, knownErrors api.ErrorSummary) api.SynologyError {
+	err := api.SynologyError{
+		Code: response.Error.Code,
+	}
 	if response.Error.Code == 0 {
 		return err
 	}
 
-	err.Code = response.Error.Code
-
-	knownErrors := append(errorDescriber.ErrorSummaries(), api.GlobalErrors)
-	err.Summary = api.DescribeError(err.Code, knownErrors...)
-
+	combinedKnownErrors := append(errorDescriber.ErrorSummaries(), knownErrors)
+	err.Summary = api.DescribeError(err.Code, combinedKnownErrors...)
 	for _, e := range response.Error.Errors {
 		item := api.ErrorItem{
 			Code:    e.Code,
-			Summary: api.DescribeError(e.Code, knownErrors...),
-			Details: make(api.ErrorFields),
+			Summary: api.DescribeError(e.Code, combinedKnownErrors...),
 		}
-		for k, v := range e.Details {
-			item.Details[k] = v
+		if len(e.Details) > 0 {
+			item.Details = make(api.ErrorFields)
+			for k, v := range e.Details {
+				item.Details[k] = v
+			}
 		}
-		// drop 'code' from map as it is represented by dedicated field
-		delete(item.Details, "code")
 		err.Errors = append(err.Errors, item)
 	}
 

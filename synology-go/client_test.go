@@ -127,33 +127,92 @@ func TestMarshalURL(t *testing.T) {
 }
 
 func TestHandleErrors(t *testing.T) {
-	c := client{}
-
-	req := func() []api.ErrorSummary {
-		return []api.ErrorSummary{map[int]string{
-			100: "error 100",
-			101: "error 101",
-			102: "error 102",
-		}}
+	globalErrors := api.ErrorSummary{
+		100: "global error 100",
+		101: "global error 101",
+		102: "global error 102",
 	}
 
-	resp := api.GenericResponse{
-		Success: false,
-		Data:    nil,
-		Error: api.SynologyError{
-			Code: 100,
-			Errors: []api.ErrorItem{
-				{Code: 101},
-				{Code: 102, Details: api.ErrorFields{"path": "/some/path", "code": 100, "reason": "a reason"}},
-				{Code: 103},
+	testCases := []struct {
+		name                string
+		response            api.GenericResponse
+		responseKnownErrors []api.ErrorSummary
+		expected            api.SynologyError
+	}{
+		{
+			name: "global errors only",
+			response: api.GenericResponse{
+				Success: false,
+				Data:    nil,
+				Error: api.SynologyError{
+					Code: 100,
+					Errors: []api.ErrorItem{
+						{Code: 101},
+						{Code: 102, Details: api.ErrorFields{"path": "/some/path", "code": 102, "reason": "a reason"}},
+					},
+				},
+			},
+			expected: api.SynologyError{
+				Code:    100,
+				Summary: "global error 100",
+				Errors: []api.ErrorItem{
+					{
+						Code:    101,
+						Summary: "global error 101",
+					},
+					{
+						Code:    102,
+						Summary: "global error 102",
+						Details: api.ErrorFields{"path": "/some/path", "code": 102, "reason": "a reason"},
+					},
+				},
+			},
+		},
+		{
+			name: "response-specific error",
+			response: api.GenericResponse{
+				Success: false,
+				Data:    nil,
+				Error: api.SynologyError{
+					Code: 100,
+					Errors: []api.ErrorItem{
+						{Code: 101},
+						{Code: 202, Details: api.ErrorFields{"code": 202}},
+					},
+				},
+			},
+			responseKnownErrors: []api.ErrorSummary{
+				{
+					202: "response error 202",
+				},
+			},
+			expected: api.SynologyError{
+				Code:    100,
+				Summary: "global error 100",
+				Errors: []api.ErrorItem{
+					{
+						Code:    101,
+						Summary: "global error 101",
+					},
+					{
+						Code:    202,
+						Summary: "response error 202",
+						Details: api.ErrorFields{"code": 202},
+					},
+				},
 			},
 		},
 	}
-	synoErr := c.handleErrors(errorDescriber(req), resp)
 
-	t.Errorf("%+#v\n", synoErr)
-
-	t.Fail()
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			actual := handleErrors(tc.response,
+				errorDescriber(func() []api.ErrorSummary { return tc.responseKnownErrors }),
+				globalErrors,
+			)
+			assert.Equal(t, tc.expected, actual)
+		})
+	}
 }
 
 type errorDescriber func() []api.ErrorSummary
