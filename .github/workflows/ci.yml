@@ -1,7 +1,7 @@
 name: main
 on:
   push:
-    branches: [ main, initial-implementation ]
+    branches: [ main ]
   pull_request:
     branches: [ main ]
 
