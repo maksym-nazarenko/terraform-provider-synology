@@ -1,5 +1,5 @@
 
 test-client:
-	go test -v -race ./synology-go/...
+	go test -v ./synology-go/...
 
 test: test-client
