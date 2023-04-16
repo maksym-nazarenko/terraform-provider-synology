@@ -22,15 +22,15 @@ for the latest version.
 package main
 
 import (
-    "log"
+	"log"
 
 	"github.com/maksym-nazarenko/terraform-provider-synology/synology-go/api"
 	"github.com/maksym-nazarenko/terraform-provider-synology/synology-go/api/filestation"
 )
 
 func main() {
-    skipCertificateVerification := true
-    c, err := New("synology-server:5001", skipCertificateVerification)
+	skipCertificateVerification := true
+	c, err := New("synology-server:5001", skipCertificateVerification)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -39,7 +39,7 @@ func main() {
 		log.Fatal(err)
 	}
 
-    req := filestation.NewCreateFolderRequest(2).
+	req := filestation.NewCreateFolderRequest(2).
 		WithFolderPath("/test-folder").
 		WithName("folder_name")
 
@@ -49,11 +49,11 @@ func main() {
 		log.Fatal(err)
 	}
 
-    if !resp.Success() {
-        log.Fatal(resp.GetError())
-    }
+	if !resp.Success() {
+		log.Fatal(resp.GetError())
+	}
 
-    log.Printf("Created %d folder(s)\n", len(resp.Folders))
+	log.Printf("Created %d folder(s)\n", len(resp.Folders))
 }
 ```
 
