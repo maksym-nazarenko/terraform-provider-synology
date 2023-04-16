@@ -82,6 +82,7 @@ func DescribeError(code int, summaries ...ErrorSummary) string {
 	return "Unknown error code"
 }
 
+// UnmarshalJSON fullfills Unmarshaler interface for JSON objects.
 func (ei *ErrorItem) UnmarshalJSON(b []byte) error {
 	fields := map[string]interface{}{}
 	err := json.Unmarshal(b, &fields)

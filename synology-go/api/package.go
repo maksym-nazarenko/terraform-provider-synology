@@ -1,8 +1,8 @@
+// Package api provides types for common objects required during calls to remote Synology instance.
 package api
 
 // Request defines a contract for all Request implementations.
-type Request interface {
-}
+type Request interface{}
 
 // Response defines an interface for all responses from Synology API.
 type Response interface {
