@@ -1,5 +1,7 @@
 # Terraform Synology Provider
 
+test
+
 This provider allows [Terraform](https://www.terraform.io/) to manage remote [Synology NAS](https://www.synology.com/dsm/solution/what-is-nas/for-home) server.
 
 
