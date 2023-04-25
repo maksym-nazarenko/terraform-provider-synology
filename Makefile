@@ -1,4 +1,7 @@
 
+build:
+	go build -o terraform-provider-synology
+
 generate:
 	go generate ./...
 
@@ -7,5 +10,10 @@ test-client:
 
 test: test-client
 
-testacc:
-	TF_ACC=1 go test ./... -v $(TESTARGS) -timeout 120m
+lint-client:
+	go vet ./synology-go/...
+
+lint-provider:
+	go vet ./internal/provider/...
+
+lint: lint-client lint-provider

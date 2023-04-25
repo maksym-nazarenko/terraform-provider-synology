@@ -12,6 +12,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/provider/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/types"
+	"github.com/maksym-nazarenko/terraform-provider-synology/internal/provider/filestation"
 	client "github.com/maksym-nazarenko/terraform-provider-synology/synology-go"
 )
 
@@ -30,10 +31,10 @@ type SynologyProvider struct{}
 
 // providerModel describes the provider data model.
 type providerModel struct {
-	host          types.String `tfsdk:"host"`
-	user          types.String `tfsdk:"user"`
-	password      types.String `tfsdk:"password"`
-	skipCertCheck types.Bool   `tfsdk:"skip_cert_check"`
+	Host          types.String `tfsdk:"host"`
+	User          types.String `tfsdk:"user"`
+	Password      types.String `tfsdk:"password"`
+	SkipCertCheck types.Bool   `tfsdk:"skip_cert_check"`
 }
 
 func (p *SynologyProvider) Metadata(ctx context.Context, req provider.MetadataRequest, resp *provider.MetadataResponse) {
@@ -71,21 +72,21 @@ func (p *SynologyProvider) Configure(ctx context.Context, req provider.Configure
 	if resp.Diagnostics.HasError() {
 		return
 	}
-	host := data.host.ValueString()
+	host := data.Host.ValueString()
 	if v := os.Getenv(SYNOLOGY_HOST_ENV_VAR); v != "" {
 		host = v
 	}
 
-	user := data.user.ValueString()
+	user := data.User.ValueString()
 	if v := os.Getenv(SYNOLOGY_USER_ENV_VAR); v != "" {
 		user = v
 	}
-	password := data.password.ValueString()
+	password := data.Password.ValueString()
 	if v := os.Getenv(SYNOLOGY_PASSWORD_ENV_VAR); v != "" {
 		password = v
 	}
 
-	skipCertificateCheck := data.skipCertCheck.ValueBool()
+	skipCertificateCheck := data.SkipCertCheck.ValueBool()
 	if vString := os.Getenv(SYNOLOGY_SKIP_CERT_CHECK_ENV_VAR); vString != "" {
 		if v, err := strconv.ParseBool(vString); err == nil {
 			skipCertificateCheck = v
@@ -128,7 +129,9 @@ func (p *SynologyProvider) Resources(ctx context.Context) []func() resource.Reso
 }
 
 func (p *SynologyProvider) DataSources(ctx context.Context) []func() datasource.DataSource {
-	return []func() datasource.DataSource{}
+	return []func() datasource.DataSource{
+		filestation.NewInfoDataSource,
+	}
 }
 
 func New() func() provider.Provider {
