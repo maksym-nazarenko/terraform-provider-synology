@@ -2,26 +2,12 @@ package client
 
 import (
 	"net/url"
-	"os"
 	"testing"
 
 	"github.com/maksym-nazarenko/terraform-provider-synology/synology-go/api"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
-
-func newClient() (Client, error) {
-	c, err := New("dev-synology:5001", true)
-	if err != nil {
-		return nil, err
-	}
-
-	if err := c.Login("api-client", os.Getenv("SYNOLOGY_PASSWORD"), "webui"); err != nil {
-		return nil, err
-	}
-
-	return c, nil
-}
 
 func TestMarshalURL(t *testing.T) {
 	type embeddedStruct struct {

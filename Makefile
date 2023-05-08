@@ -17,3 +17,6 @@ lint-provider:
 	go vet ./internal/provider/...
 
 lint: lint-client lint-provider
+
+client-integration-test:
+	go test ./synology-go/...

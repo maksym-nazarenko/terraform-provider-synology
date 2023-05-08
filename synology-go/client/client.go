@@ -4,6 +4,7 @@ import (
 	"context"
 	"crypto/tls"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"net"
@@ -29,8 +30,17 @@ type client struct {
 	host       string
 }
 
+var (
+	SYNOLOGY_HOST_ENV     = "SYNOLOGY_HOST"
+	SYNOLOGY_USER_ENV     = "SYNOLOGY_USER"
+	SYNOLOGY_PASSWORD_ENV = "SYNOLOGY_PASSWORD"
+)
+
 // New initializes "client" instance with minimal input configuration.
 func New(host string, skipCertificateVerification bool) (Client, error) {
+	if len(strings.TrimSpace(host)) == 0 {
+		return nil, errors.New("host must be provider for client creation")
+	}
 	transport := &http.Transport{
 		DialContext: (&net.Dialer{
 			Timeout:   10 * time.Second,

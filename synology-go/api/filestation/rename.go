@@ -4,11 +4,11 @@ import (
 	"github.com/maksym-nazarenko/terraform-provider-synology/synology-go/api"
 )
 
-type FileStationRenameRequest struct {
+type RenameRequest struct {
 	baseFileStationRequest
 
-	name string
-	path string
+	names []string `synology:"name"`
+	paths []string `synology:"path"`
 }
 
 type File struct {
@@ -17,16 +17,16 @@ type File struct {
 	IsDir bool
 }
 
-type FileStationRenameResponse struct {
+type RenameResponse struct {
 	baseFileStationResponse
 
 	Files []File
 }
 
-var _ api.Request = (*FileStationRenameRequest)(nil)
+var _ api.Request = (*RenameRequest)(nil)
 
-func NewFileStationRenameRequest(version int) *FileStationRenameRequest {
-	return &FileStationRenameRequest{
+func NewRenameRequest(version int) *RenameRequest {
+	return &RenameRequest{
 		baseFileStationRequest: baseFileStationRequest{
 			Version:   version,
 			APIName:   "SYNO.FileStation.Rename",
@@ -35,17 +35,17 @@ func NewFileStationRenameRequest(version int) *FileStationRenameRequest {
 	}
 }
 
-func (r *FileStationRenameRequest) WithName(value string) *FileStationRenameRequest {
-	r.name = value
+func (r *RenameRequest) WithName(value string) *RenameRequest {
+	r.names = append(r.names, value)
 	return r
 }
 
-func (r *FileStationRenameRequest) WithPath(value string) *FileStationRenameRequest {
-	r.path = value
+func (r *RenameRequest) WithPath(value string) *RenameRequest {
+	r.paths = append(r.paths, value)
 	return r
 }
 
-func (r FileStationRenameResponse) ErrorSummaries() []api.ErrorSummary {
+func (r RenameResponse) ErrorSummaries() []api.ErrorSummary {
 	return []api.ErrorSummary{
 		{
 			1200: "Failed to rename it.",
